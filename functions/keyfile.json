@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "thewarofstars-8f9a8",
+  "private_key_id": "da3782bf81dd2ce971fa8d0bb920ead68abcbc94",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC1WEhIj1ydcWj2\neA6MoHIPye3c+/J10vKbQJhFxLPyz5Pp+1JrHvNcdI2WYO3+36zdJPQCwXLhGYZD\nSi+TkLMyUq3RigcpHFJWSkj6LoL12XFlw0Puxy0AsIFeKiOWECuyhYuuMGosPtWR\n7gFWxKB2+wUHcqK5dHEg40hwYQInX3BNCJDeVP3XjRN0Sqqf7qcljerZcEBw0U+4\n4WwZHAtCZPLdHA9qLsjuOfxKh7nsu8VLzTEfSAdOC1ib1nUkcWwXKOJLec6jbEqV\nz2aYVycrxgVQJOMiPtnXEc6B6w06W1QpY+y9g3PtZfnidEdq/Z8KBxxMmVA2MwHo\naWIiz5L3AgMBAAECggEAF/+Nr/MvkEhUrx/r26ap9uFD9fVuPIhvgaXWi45rOpac\nyPSbj2ss988Wzk/tKZ2ucc+KQ8kXllFl6AbBGA1TTDVjz5yCs76N6OHIxDmegWwb\n/8Rg+5A71OEG0GV8MxzYY4tyai6kW6REaBzv7Bcg8yM8ovkug/i0YI6jZKJ511LR\na7ayjbTXrnhu4OXG1rzidQjg3ZTBwRujkp6Z4IEERcWW2gbna3KBT99nr39ZK+I0\nsGw3d4RjQkzIZYjbCM1YNKHLzUIFjXa88ZTiaBL8z/wVhGrR5QD/QAq9SIQW2auf\nM33T1NSYdybT2fCHEpqaPTSKU/h/Iuc+9qdRN58TmQKBgQDd0n4zzcsKL/079o5Y\nFn2QR9TyFGrit0WLYttCWAhNJaZwVOkZdviGXv/j6uz+InVRcLT63BhOwQVjG4Jz\njtovX+Q/HyWSLWsbsezDZb0OrCq/9iMWnb9QTNG1xYcrUej14H3OoWk5axAcs5jF\n/FF4B32ZBpQNdLBWdJHVGAIuDwKBgQDRSTVZrEVpHq+gbmvcVXMy8Ijx42kV+08g\nuRRccUKX6wLnMqjmOf893CciKU+cjwmLymuEtoPyG/riVwpgtaP1fvGfGmM8lFcJ\nlJyE5PCQxekLX9TpzxtVL0wspxPQvGXOt+S+0BtkA2HLO8PbWTQEGzScGO2PXJBv\nCIIbTGk0mQKBgBMGe8aLrw93oDulYP4TJ7/ZOV1t/ODnITLcTrv4+vVK9mSKE9gY\nSSaVPVNaEeuWHwPWK9+cQwV2LrUaZeztYq9PhS8Yx8sq1BXzA8CamEWK5LvEK6xD\n6WXEwPPbNkWz58w27fNsCq9fDGm5ya+pfX9S/SXD16zzxjAUHXHudjlnAoGAQioB\n2tKysvQHlBG0udit7cnLkaVSgKeNsYuxmzQXWI3swgjrCrYFMppaKNuklptF6lLZ\nQQCuoCkmXM4lssNaDW/PlXwzKWDAT4ATJ5R1VV+sOHNYjX5zZq/oRimgAxq8mOjc\nQVLrhefnz+eaGMuPvUiYjkz3NZ6O7vtinpy+mekCgYEAiQY4mnzC0OMK9YThNYFK\n/qH4YaChaITrn1sX9v9aocl0mxi01WypHUDY6xofYtoqVLty08Xtc/OP+f+Nv4wE\nJq+19g+orwQSzfFxN6XgDHiL77PSdbY8tR532+OfGcVUbz30UOQh98kdFV1pDRkA\n/9cwYLvCNtmLOa6kGQtDnNY=\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-7wb0r@thewarofstars-8f9a8.iam.gserviceaccount.com",
+  "client_id": "109692682636329524617",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-7wb0r%40thewarofstars-8f9a8.iam.gserviceaccount.com"
+}
