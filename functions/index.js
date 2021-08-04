@@ -6,7 +6,7 @@
 // 20001 - fcmToken is invalid
 
 //Message Type
-// - Chatting
+// - CHATTING
 // -
 // -
 
@@ -34,21 +34,58 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     // 1. 채팅에 필요한 정보를 받아온다.
     const receiverUID  = req.query.to;
     const senderUID    = req.query.from;
+    const senderType   = req.query.type; // USER or GAMER
     const content      = req.query.content;
     
-    // 2. 게이머의 uID가 올바른지 조회한다. fcmToken을 조회한다.
-    // 2.1. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
+    
+    // 2. uID로 fcmToken을 조회한다.
+    // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
+    // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
+    // 2.3. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
 
-    // 2.1. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
-    const fcmTokenRef      = db.collection('GamerList').doc(receiverUID);
-    const fcmTokenSnapshot = await fcmTokenRef.get();
-    const fcmToken         = fcmTokenSnapshot.get('fcmToken');
+    // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
+    var fcmTokenRef;
+    var fcmTokenSnapshot;
+    var fcmToken;
+    if (senderType == 'USER') {
+      fcmTokenRef      = db.collection('GamerList').doc(receiverUID);
+      fcmTokenSnapshot = await fcmTokenRef.get();
+      fcmToken         = fcmTokenSnapshot.get('fcmToken');
+    }
+    if (senderType == 'GAMER') {
+      fcmTokenRef      = db.collection('UserList').doc(receiverUID);
+      fcmTokenSnapshot = await fcmTokenRef.get();
+      fcmToken         = fcmTokenSnapshot.get('fcmToken');
 
-    // 2.1. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
+    }
+    
+
+    // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
     if (fcmToken == null) {
       console.log('fcmToken', '=>', fcmToken);      
       throw new functions.https.HttpsError(20000, 'message : fcmToken is null');
     }
+ 
+    // 2.3. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
+    var senderRef;
+    var senderSnapshot;
+    var senderName;
+    if (senderType == 'USER') {
+      senderRef = db.collection('UserList').doc(senderUID);
+      senderSnapshot = await senderRef.get();
+      senderName = senderSnapshot.get('nickname');
+      
+    }
+
+    if (senderType == 'GAMER') {
+      senderRef = db.collection('GamerList').doc(senderUID);
+      senderSnapshot = await senderRef.get();
+      senderName = senderSnapshot.get('name');
+      
+    }
+
+
+
 
     // 3. RDB에 데이터 쓰기 작업을 진행해준다.
     //  3.1. 말풍선 데이터 한 개를 만든다. 
@@ -67,13 +104,13 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     const commentUID = commentRef.key
 
     //  3.2. 수신자가 이를 참조한다.
-    const receiverRef = admin.database()
-    .ref(`user/${receiverUID}/${commentUID}`)
+    admin.database()
+    .ref(`user/${receiverUID}/${senderUID}/${commentUID}`)
     .set(false);
 
     //  3.3. 발신자가 이를 참조한다.
-    const senderRef = admin.database()
-    .ref(`user/${senderUID}/${commentUID}`)
+    admin.database()
+    .ref(`user/${senderUID}/${receiverUID}/${commentUID}`)
     .set(true);
 
     // 4. 완료했다면 fcmToken을 보내준다.
@@ -89,7 +126,10 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
         icon: 'https://blog.kakaocdn.net/dn/kBexr/btqxjBUVgL6/C1hJKqfcwwfkglSWwQdN91/img.png'
       },
       data: {
-        type: 'CHATTING'
+        notiType   : 'CHATTING',
+        senderType : `${senderType}`,
+        senderName : `${senderName}`,
+        senderUID  : `${senderUID}`
       }
     };
 
