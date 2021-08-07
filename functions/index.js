@@ -88,35 +88,122 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
 
 
     // 3. RDB에 데이터 쓰기 작업을 진행해준다.
-    //  3.1. 말풍선 데이터 한 개를 만든다. 
-    //  3.2. 수신자가 이를 참조한다.
-    //  3.3. 발신자가 이를 참조한다.
+    //  3.0. 대화중인 채팅방을 찾는다. 
+    //  3.1. 만약 없다면 하나를 만든다.
+    //  3.2. 채팅방 하나에 comments를 만든다.
+    //  3.3. 채팅방 하나에 users를 만든다.
 
-    //  3.1. 말풍선 데이터 한 개를 만든다.
-    const commentDate = new Date().getTime(); 
-    const commentRef  = admin.database()
-    .ref('comments/')
-    .push();
-    commentRef.set({
-      content: content,
-      timeStamp: commentDate,
-    });
-    const commentUID = commentRef.key
+    //  3.0. 대화중인 채팅방을 찾는다. 
+    // const chattingRoomUserRef  = admin.database()
+    // .ref()
+    // .child('ChattingRooms')
+    // .orderByChild(`users/${senderUID}`)
+    // .equalTo(true)
+    
 
-    //  3.2. 수신자가 이를 참조한다.
-    admin.database()
-    .ref(`user/${receiverUID}/${senderUID}/${commentUID}`)
-    .set(false);
+    // const temp = chattingRoomUserRef.get().then((snapshot) => {
+    //   if (snapshot.exists()) {
+    //     console.log(snapshot.val());
+    //     res.json({temp: snapshot.val()});
+    //   } else {
+    //     console.log("No data available");
+    //     res.json({temp: "No data available"});
+    //   }
+    // }).catch((error) => {
+    //   console.error(error);
+    //   res.json({temp: error});
+    // });
+    
+    //  3.0. 대화중인 채팅방을 찾는다.
+    var isThereChattingRoom = false
+    var chattingRoomId;
+    var commentDate;
 
-    //  3.3. 발신자가 이를 참조한다.
-    admin.database()
-    .ref(`user/${senderUID}/${receiverUID}/${commentUID}`)
-    .set(true);
+    await admin.database()
+    .ref()
+    .child('users')
+    .child(senderUID)
+    .child('ChattingRooms')
+    .get()
+    .then((snapshot) => {
+      
+      if (snapshot.exists()) {
 
-    // 4. 완료했다면 fcmToken을 보내준다.
-    // 4.1. 페이로드를 작성한다.
-    // 4.2. 메시지를 전송한다.
-    // 4.3. 콜백을 처리한다.
+        console.log("chatting room list start");
+        
+        snapshot.forEach((childSnapshot) => {
+          var roomId = childSnapshot.key;    // 채팅방 id
+          var userId = childSnapshot.val();  // 채팅방에 있는 사용자 id
+          
+          if (receiverUID == userId) {
+            isThereChattingRoom = true;
+            chattingRoomId = roomId;
+            // break
+          }
+        })
+
+      } else {
+        console.log("No chatting room");
+      } 
+    }).catch((error) => {
+      res.json({temp: 'error'});
+    })
+ 
+    
+    // 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
+    if (isThereChattingRoom) {
+
+      console.log('base chatting room');
+
+      commentDate = new Date().getTime(); 
+      const chattingRoomRef  = admin.database().ref()
+      .child('ChattingRooms')
+      .child(chattingRoomId)
+      .child('comments')
+      .push()
+      .set({
+        content: content,
+        timeStamp: commentDate,
+        uid: senderUID
+      });
+
+    }
+
+    // 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
+    else {
+
+      console.log('new chatting room');
+      
+      commentDate = new Date().getTime(); 
+      const chattingRoomRef  = admin.database().ref()
+      .child('ChattingRooms')
+      .push()
+      chattingRoomRef
+      .child('comments')
+      .push()
+      .set({
+        content: content,
+        timeStamp: commentDate,
+        uid: senderUID
+      });
+      chattingRoomId = chattingRoomRef.key
+    }
+    
+    admin.database().ref()
+    .child('users')
+    .child(senderUID)
+    .child('ChattingRooms')
+    .child(chattingRoomId) 
+    .set(receiverUID)
+
+    
+    admin.database().ref()
+    .child('users')
+    .child(receiverUID)
+    .child('ChattingRooms')
+    .child(chattingRoomId) 
+    .set(senderUID)
+     
 
     // 4.1. 페이로드를 작성한다. 
     const notificationPayload = {
