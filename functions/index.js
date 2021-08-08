@@ -92,27 +92,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     //  3.1. 만약 없다면 하나를 만든다.
     //  3.2. 채팅방 하나에 comments를 만든다.
     //  3.3. 채팅방 하나에 users를 만든다.
-
-    //  3.0. 대화중인 채팅방을 찾는다. 
-    // const chattingRoomUserRef  = admin.database()
-    // .ref()
-    // .child('ChattingRooms')
-    // .orderByChild(`users/${senderUID}`)
-    // .equalTo(true)
-    
-
-    // const temp = chattingRoomUserRef.get().then((snapshot) => {
-    //   if (snapshot.exists()) {
-    //     console.log(snapshot.val());
-    //     res.json({temp: snapshot.val()});
-    //   } else {
-    //     console.log("No data available");
-    //     res.json({temp: "No data available"});
-    //   }
-    // }).catch((error) => {
-    //   console.error(error);
-    //   res.json({temp: error});
-    // });
+ 
     
     //  3.0. 대화중인 채팅방을 찾는다.
     var isThereChattingRoom = false
@@ -156,7 +136,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       console.log('base chatting room');
 
       commentDate = new Date().getTime(); 
-      const chattingRoomRef  = admin.database().ref()
+      admin.database().ref()
       .child('ChattingRooms')
       .child(chattingRoomId)
       .child('comments')
@@ -264,21 +244,21 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     res.json({commentDate: commentDate});
   });
 
-exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
-.onCreate((snap, context) => {
+// exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
+// .onCreate((snap, context) => {
   
-  const gamerUID = snap.data().to;
-  const from     = snap.data().from;
-  const content  = snap.data().content;
+//   const gamerUID = snap.data().to;
+//   const from     = snap.data().from;
+//   const content  = snap.data().content;
 
-  // 선수 이메일을 사용해 fcmToken을 알아낸다
-  const fcmToken = admin.firestore.ref('/GamerList/${gamerUID}/fcmToken')
+//   // 선수 이메일을 사용해 fcmToken을 알아낸다
+//   const fcmToken = admin.firestore.ref('/GamerList/${gamerUID}/fcmToken')
   
-  const original = snap.data().original;
-  functions.logger.log('Uppercasing', context.params.documentId, original);
+//   const original = snap.data().original;
+//   functions.logger.log('Uppercasing', context.params.documentId, original);
 
-  const uppercase = original.toUpperCase();
+//   const uppercase = original.toUpperCase();
 
 
-  return snap.ref.set({uppercase}, {merge: true});
-});
+//   return snap.ref.set({uppercase}, {merge: true});
+// });
