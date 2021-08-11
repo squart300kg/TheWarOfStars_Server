@@ -4,6 +4,7 @@
 // ErrorCode
 // 20000 - fcmToken is null
 // 20001 - fcmToken is invalid
+// 20002 - failed to send notification
 
 //Message Type
 // - CHATTING
@@ -20,15 +21,14 @@ admin.initializeApp({
 });
 const db = admin.firestore();
 
-
+ 
 /**
-     *  === 채팅 프로세스 ===
-     * 1. 채팅에 필요한 정보를 받아온다. - 성공
-     * 2. 게이머의 uID를 통해 fcmToken을 조회한다. - 
-     *  2.1. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
-     * 3. RDB에 데이터 쓰기 작업을 진행해준다.
-     * 4. 완료했다면 fcmToken을 보내준다
-     */
+ * 채팅 프로세스
+ * 1. 채팅에 필요한 정보를 받아온다.
+ * 2. uID로 fcmToken을 조회한다.
+ * 3. RDB에 데이터 쓰기작업을 진행한다.
+ * 4. 노티피케이션 전송을 시작한다.
+ */
 exports.sendMessage = functions.https.onRequest(async (req, res) => {
     
     // 1. 채팅에 필요한 정보를 받아온다.
@@ -41,7 +41,8 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     // 2. uID로 fcmToken을 조회한다.
     // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
     // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
-    // 2.3. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
+    // 2.3. fcmToken 유효성 검사를 한다.
+    // 2.4. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
 
     // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
     var fcmTokenRef;
@@ -62,11 +63,25 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
 
     // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
     if (fcmToken == null) {
-      console.log('fcmToken', '=>', fcmToken);      
+      console.log('fcmToken is null', '=>', fcmToken);      
       throw new functions.https.HttpsError(20000, 'message : fcmToken is null');
+    } else {
+      console.log('fcmToken is not null', '=>', fcmToken);      
     }
+
+    // 2.3. fcmToken 유효성 검사를 한다.
+    await admin.messaging()
+    .send({
+      token: fcmToken
+    }, true)
+    .then(result => {
+      console.log('fcmToken validation result', '=>', result);
+    })
+    .catch(err => {
+      throw new functions.https.HttpsError(20001, 'message : fcmToken is invalid');
+    })
  
-    // 2.3. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
+    // 2.4. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
     var senderRef;
     var senderSnapshot;
     var senderName;
@@ -74,6 +89,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       senderRef = db.collection('UserList').doc(senderUID);
       senderSnapshot = await senderRef.get();
       senderName = senderSnapshot.get('nickname');
+      console.log('USER name : ', senderName);
       
     }
 
@@ -81,6 +97,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       senderRef = db.collection('GamerList').doc(senderUID);
       senderSnapshot = await senderRef.get();
       senderName = senderSnapshot.get('name');
+      console.log('GAMER name : ', senderName);
       
     }
 
@@ -89,9 +106,10 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
 
     // 3. RDB에 데이터 쓰기 작업을 진행해준다.
     //  3.0. 대화중인 채팅방을 찾는다. 
-    //  3.1. 만약 없다면 하나를 만든다.
-    //  3.2. 채팅방 하나에 comments를 만든다.
-    //  3.3. 채팅방 하나에 users를 만든다.
+    //  3.1. 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
+    //  3.2. 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
+    //  3.3. 보낸이가 가진 채팅방 정보를 저장한다.
+    //  3.4. 수신이가 가진 채팅방 정보를 저장한다.
  
     
     //  3.0. 대화중인 채팅방을 찾는다.
@@ -130,13 +148,13 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     })
  
     
-    // 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
+    // 3.1. 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
     if (isThereChattingRoom) {
 
       console.log('base chatting room');
 
       commentDate = new Date().getTime(); 
-      admin.database().ref()
+      await admin.database().ref()
       .child('ChattingRooms')
       .child(chattingRoomId)
       .child('comments')
@@ -149,13 +167,13 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
 
     }
 
-    // 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
+    // 3.2. 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
     else {
 
       console.log('new chatting room');
       
       commentDate = new Date().getTime(); 
-      const chattingRoomRef  = admin.database().ref()
+      const chattingRoomRef  = await admin.database().ref()
       .child('ChattingRooms')
       .push()
       chattingRoomRef
@@ -169,21 +187,26 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       chattingRoomId = chattingRoomRef.key
     }
     
-    admin.database().ref()
+    // 3.3. 보낸이가 가진 채팅방 정보를 저장한다.
+    await admin.database().ref()
     .child('users')
     .child(senderUID)
     .child('ChattingRooms')
     .child(chattingRoomId) 
     .set(receiverUID)
 
-    
-    admin.database().ref()
+    // 3.4. 수신이가 가진 채팅방 정보를 저장한다.    
+    await admin.database().ref()
     .child('users')
     .child(receiverUID)
     .child('ChattingRooms')
     .child(chattingRoomId) 
     .set(senderUID)
      
+    // 4. 노티피케이션 전송을 시작한다.
+    //  4.1. 페이로드를 작성한다. 
+    //  4.2. 메시지를 전송한다.
+    //  4.3. 콜백을 처리한다.
 
     // 4.1. 페이로드를 작성한다. 
     const notificationPayload = {
@@ -200,7 +223,6 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       }
     };
 
-    
     // 4.2. 메시지를 전송한다.
     const response = await admin.messaging()
     .sendToDevice(fcmToken, notificationPayload);
@@ -210,34 +232,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     response.results.forEach((result, index) => {
       const error = result.error;
       if (error) {
-
-        // 유효하지 않은 토큰을 가진 사람에게 보낸 말은 지운다.
-        if (error.code === 'messaging/invalid-registration-token' ||
-            error.code === 'messaging/registration-token-not-registered') {
-            
-              console.log('noti error', '=>' , error.code);
-
-
-              //  3.1. 말풍선 데이터를 삭제
-               admin.database()
-              .ref(`comments/${commentUID}`)
-              .remove();
-              
-
-              //  3.2. 수신자가 데이터 삭제
-              const receiverRef = admin.database()
-              .ref(`user/${receiverUID}/${commentUID}`)
-              .remove();
-
-              //  3.3. 발신자가 데이터 삭제
-              const senderRef = admin.database()
-              .ref(`user/${senderUID}/${commentUID}`)
-              .remove();
-
-          throw new functions.https.HttpsError(20001, 'message : fcmToken is invalid');
-
-        }
-        
+        throw new functions.https.HttpsError(20002, 'message : failed to send notification');
       }
     });
 
