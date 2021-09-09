@@ -1,0 +1,259 @@
+
+// test fcm token : dgXtuODLSFWaQup13XbX1V:APA91bHabPFzjqT8ybDybCaSwSqfIeszNVBCFcqKAuPJOMLaxsc7PYkH7-H7o7bLLkLyNdoQLJ1pAHPgFDddPxaBgckbXDnN-LR2X-CzfsxGxhsMeM__d655q-oQkPgIS5_XAqttXGnD
+
+// ErrorCode
+// 20000 - fcmToken is null
+// 20001 - fcmToken is invalid
+// 20002 - failed to send notification
+
+//Message Type
+// - CHATTING
+// -
+// -
+
+const functions      = require('firebase-functions');
+const admin          = require('firebase-admin');
+const serviceAccount = require('./keyfile.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  databaseURL: "https://thewarofstars-8f9a8-default-rtdb.firebaseio.com"
+});
+const db = admin.firestore();
+
+ 
+/**
+ * 채팅 프로세스
+ * 1. 채팅에 필요한 정보를 받아온다.
+ * 2. uID로 fcmToken을 조회한다.
+ * 3. RDB에 데이터 쓰기작업을 진행한다.
+ * 4. 노티피케이션 전송을 시작한다.
+ */
+exports.sendMessage = functions.https.onRequest(async (req, res) => {
+    
+    // 1. 채팅에 필요한 정보를 받아온다.
+    const receiverUID  = req.query.to;
+    const senderUID    = req.query.from;
+    const senderType   = req.query.type; // USER or GAMER
+    const content      = req.query.content;
+    
+    
+    // 2. uID로 fcmToken을 조회한다.
+    // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
+    // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
+    // 2.3. fcmToken 유효성 검사를 한다.
+    // 2.4. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
+
+    // 2.1. senderType이 USER이면 게이머 fcmToken을 type이 GAMER면 유저 fcmToken을 가져온다.
+    var fcmTokenRef;
+    var fcmTokenSnapshot;
+    var fcmToken;
+    if (senderType == 'USER') {
+      fcmTokenRef      = db.collection('GamerList').doc(receiverUID);
+      fcmTokenSnapshot = await fcmTokenRef.get();
+      fcmToken         = fcmTokenSnapshot.get('fcmToken');
+    }
+    if (senderType == 'GAMER') {
+      fcmTokenRef      = db.collection('UserList').doc(receiverUID);
+      fcmTokenSnapshot = await fcmTokenRef.get();
+      fcmToken         = fcmTokenSnapshot.get('fcmToken');
+
+    }
+    
+
+    // 2.2. fcmToken이 없다면 함수를 더 진행할 필요없다. 종료한다.
+    if (fcmToken == null) {
+      console.log('fcmToken is null', '=>', fcmToken);      
+      throw new functions.https.HttpsError(20000, 'message : fcmToken is null');
+    } else {
+      console.log('fcmToken is not null', '=>', fcmToken);      
+    }
+
+    // 2.3. fcmToken 유효성 검사를 한다.
+    await admin.messaging()
+    .send({
+      token: fcmToken
+    }, true)
+    .then(result => {
+      console.log('fcmToken validation result', '=>', result);
+    })
+    .catch(err => {
+      throw new functions.https.HttpsError(20001, 'message : fcmToken is invalid');
+    })
+ 
+    // 2.4. senderType이 USER이면 유저 닉네임을 type이 GAMER면 게이머 이름을 가져온다.
+    var senderRef;
+    var senderSnapshot;
+    var senderName;
+    if (senderType == 'USER') {
+      senderRef = db.collection('UserList').doc(senderUID);
+      senderSnapshot = await senderRef.get();
+      senderName = senderSnapshot.get('nickname');
+      console.log('USER name : ', senderName);
+      
+    }
+
+    if (senderType == 'GAMER') {
+      senderRef = db.collection('GamerList').doc(senderUID);
+      senderSnapshot = await senderRef.get();
+      senderName = senderSnapshot.get('name');
+      console.log('GAMER name : ', senderName);
+      
+    }
+
+
+
+
+    // 3. RDB에 데이터 쓰기 작업을 진행해준다.
+    //  3.0. 대화중인 채팅방을 찾는다. 
+    //  3.1. 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
+    //  3.2. 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
+    //  3.3. 보낸이가 가진 채팅방 정보를 저장한다.
+    //  3.4. 수신이가 가진 채팅방 정보를 저장한다.
+ 
+    
+    //  3.0. 대화중인 채팅방을 찾는다.
+    var isThereChattingRoom = false
+    var chattingRoomId;
+    var commentDate;
+
+    await admin.database()
+    .ref()
+    .child('users')
+    .child(senderUID)
+    .child('ChattingRooms')
+    .get()
+    .then((snapshot) => {
+      
+      if (snapshot.exists()) {
+
+        console.log("chatting room list start");
+        
+        snapshot.forEach((childSnapshot) => {
+          var roomId = childSnapshot.key;    // 채팅방 id
+          var userId = childSnapshot.val();  // 채팅방에 있는 사용자 id
+          
+          if (receiverUID == userId) {
+            isThereChattingRoom = true;
+            chattingRoomId = roomId;
+            // break
+          }
+        })
+
+      } else {
+        console.log("No chatting room");
+      } 
+    }).catch((error) => {
+      res.json({temp: 'error'});
+    })
+ 
+    
+    // 3.1. 채팅방이 존재하면 기존 채팅방에 채팅메시지를 입력해준다.
+    if (isThereChattingRoom) {
+
+      console.log('base chatting room');
+
+      commentDate = new Date().getTime(); 
+      await admin.database().ref()
+      .child('ChattingRooms')
+      .child(chattingRoomId)
+      .child('comments')
+      .push()
+      .set({
+        content: content,
+        timeStamp: commentDate,
+        uid: senderUID
+      });
+
+    }
+
+    // 3.2. 채팅방이 없으면 새로 만든다. 그리고 메시지를 입력한다.
+    else {
+
+      console.log('new chatting room');
+      
+      commentDate = new Date().getTime(); 
+      const chattingRoomRef  = await admin.database().ref()
+      .child('ChattingRooms')
+      .push()
+      chattingRoomRef
+      .child('comments')
+      .push()
+      .set({
+        content: content,
+        timeStamp: commentDate,
+        uid: senderUID
+      });
+      chattingRoomId = chattingRoomRef.key
+    }
+    
+    // 3.3. 보낸이가 가진 채팅방 정보를 저장한다.
+    await admin.database().ref()
+    .child('users')
+    .child(senderUID)
+    .child('ChattingRooms')
+    .child(chattingRoomId) 
+    .set(receiverUID)
+
+    // 3.4. 수신이가 가진 채팅방 정보를 저장한다.    
+    await admin.database().ref()
+    .child('users')
+    .child(receiverUID)
+    .child('ChattingRooms')
+    .child(chattingRoomId) 
+    .set(senderUID)
+     
+    // 4. 노티피케이션 전송을 시작한다.
+    //  4.1. 페이로드를 작성한다. 
+    //  4.2. 메시지를 전송한다.
+    //  4.3. 콜백을 처리한다.
+
+    // 4.1. 페이로드를 작성한다. 
+    const notificationPayload = {
+      notification: {
+        title: '메시지 도착',
+        body: `${content}`,
+        icon: 'https://blog.kakaocdn.net/dn/kBexr/btqxjBUVgL6/C1hJKqfcwwfkglSWwQdN91/img.png'
+      },
+      data: {
+        notiType   : 'CHATTING',
+        senderType : `${senderType}`,
+        senderName : `${senderName}`,
+        senderUID  : `${senderUID}`
+      }
+    };
+
+    // 4.2. 메시지를 전송한다.
+    const response = await admin.messaging()
+    .sendToDevice(fcmToken, notificationPayload);
+    
+    
+    // 4.3. 콜백을 처리한다.
+    response.results.forEach((result, index) => {
+      const error = result.error;
+      if (error) {
+        throw new functions.https.HttpsError(20002, 'message : failed to send notification');
+      }
+    });
+
+    res.json({commentDate: commentDate});
+  });
+
+// exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
+// .onCreate((snap, context) => {
+  
+//   const gamerUID = snap.data().to;
+//   const from     = snap.data().from;
+//   const content  = snap.data().content;
+
+//   // 선수 이메일을 사용해 fcmToken을 알아낸다
+//   const fcmToken = admin.firestore.ref('/GamerList/${gamerUID}/fcmToken')
+  
+//   const original = snap.data().original;
+//   functions.logger.log('Uppercasing', context.params.documentId, original);
+
+//   const uppercase = original.toUpperCase();
+
+
+//   return snap.ref.set({uppercase}, {merge: true});
+// });
