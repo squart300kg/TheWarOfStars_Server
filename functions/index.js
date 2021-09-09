@@ -239,6 +239,41 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     res.json({commentDate: commentDate});
   });
 
+  exports.sendPayNotification = functions.https.onRequest(async (req, res) => {
+  
+    const receiverUID = req.query.to;
+    const senderUID   = req.query.from;
+
+    // 닉네임 추출
+    var userNicknameRef = db.collection('UserList').doc(senderUID);
+    var userNicknameSnapShot = await userNicknameRef.get();
+    var userNickname = userNicknameSnapShot.get('nickname');
+
+    // fcmToken추출
+    var fcmTokenRef       = db.collection('GamerList').doc(receiverUID);
+    var fcmTokenSnappShot = await fcmTokenRef.get();
+    var fcmToken          = fcmTokenSnappShot.get('fcmToken');
+
+    var gamerCode = Math.floor(Math.random() * 900) + 100;
+    var userCode = Math.floor(Math.random() * 900) + 100;
+    
+    const notificationPayload = {
+      notification: {
+        title: `${userNickname}님께서 결제를 완료하였습니다!`,
+        body: '코칭을 시작해 주세요!',
+        icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
+      },
+      data: {
+        notiType : 'PAY'
+      }
+    }
+
+    const response = await admin.messaging()
+    .sendToDevice(fcmToken, notificationPayload);
+
+    res.json({gamerCode : gamerCode, userCode : userCode})
+  });
+
 // exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
 // .onCreate((snap, context) => {
   
