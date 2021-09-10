@@ -268,10 +268,35 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       }
     }
 
+    // const notificationPayload = {
+    //   default : "push notification",
+    //   GCM : {
+    //     notification: {
+    //       title: `${userNickname}님께서 결제를 완료하였습니다!`,
+    //       body: '코칭을 시작해 주세요!',
+    //       icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
+    //     },
+    //     data : {
+    //       notiType : 'PAY'
+    //     }
+    //   }
+    // }
+
     const response = await admin.messaging()
     .sendToDevice(fcmToken, notificationPayload);
 
-    res.json({gamerCode : gamerCode, userCode : userCode})
+    const result = {
+      gamer : {
+        gamerUID : receiverUID,
+        gamerCode : gamerCode
+      },
+      user : {
+        userUID : senderUID,
+        userCode : userCode
+      } 
+    }
+
+    res.json(result)
   });
 
 // exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
