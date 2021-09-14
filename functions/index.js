@@ -243,11 +243,17 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
   
     const receiverUID = req.query.to;
     const senderUID   = req.query.from;
+    const content     = req.query.content;
 
-    // 닉네임 추출
+    // 아마추어 닉네임 추출
     var userNicknameRef = db.collection('UserList').doc(senderUID);
     var userNicknameSnapShot = await userNicknameRef.get();
     var userNickname = userNicknameSnapShot.get('nickname');
+
+    // 게이머 닉네임 추출
+    var gamerNameRef = db.collection('GamerList').doc(receiverUID);
+    var gamerNameSnapShot = await gamerNameRef.get();
+    var gamerName = gamerNameSnapShot.get('name');
 
     // fcmToken추출
     var fcmTokenRef       = db.collection('GamerList').doc(receiverUID);
@@ -257,6 +263,8 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     var gamerCode = Math.floor(Math.random() * 900) + 100;
     var userCode = Math.floor(Math.random() * 900) + 100;
     
+    var payDate = new Date().getTime(); 
+
     const notificationPayload = {
       notification: {
         title: `${userNickname}님께서 결제를 완료하였습니다!`,
@@ -264,23 +272,17 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
         icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
       },
       data: {
-        notiType : 'PAY'
+        notiType : 'PAY',
+        payDate : payDate.toString(),
+        content : content,
+        gamerUID : receiverUID,
+        gamerName : gamerName,
+        gamerCode : gamerCode.toString(),
+        userUID : senderUID,
+        userNickname : userNickname,
+        userCode : userCode.toString()
       }
-    }
-
-    // const notificationPayload = {
-    //   default : "push notification",
-    //   GCM : {
-    //     notification: {
-    //       title: `${userNickname}님께서 결제를 완료하였습니다!`,
-    //       body: '코칭을 시작해 주세요!',
-    //       icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
-    //     },
-    //     data : {
-    //       notiType : 'PAY'
-    //     }
-    //   }
-    // }
+    } 
 
     const response = await admin.messaging()
     .sendToDevice(fcmToken, notificationPayload);
@@ -288,10 +290,12 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     const result = {
       gamer : {
         gamerUID : receiverUID,
+        gamerName : gamerName,
         gamerCode : gamerCode
       },
       user : {
         userUID : senderUID,
+        userNickname : userNickname,
         userCode : userCode
       } 
     }
