@@ -244,16 +244,21 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     const receiverUID = req.query.to;
     const senderUID   = req.query.from;
     const content     = req.query.content;
-
-    // 아마추어 닉네임 추출
-    var userNicknameRef = db.collection('UserList').doc(senderUID);
-    var userNicknameSnapShot = await userNicknameRef.get();
-    var userNickname = userNicknameSnapShot.get('nickname');
+    const price       = req.query.price;
 
     // 게이머 닉네임 추출
-    var gamerNameRef = db.collection('GamerList').doc(receiverUID);
-    var gamerNameSnapShot = await gamerNameRef.get();
-    var gamerName = gamerNameSnapShot.get('name');
+    var gamerRef = db.collection('GamerList').doc(receiverUID);
+    var gamerSnapShot = await gamerRef.get();
+    var gamerName = gamerSnapShot.get('name');
+    var gamerTribe = gamerSnapShot.get('tribe');
+    var gamerID = gamerSnapShot.get('gameID');
+
+    // 아마추어 닉네임 추출
+    var userRef = db.collection('UserList').doc(senderUID);
+    var userSnapShot = await userRef.get();
+    var userNickname = userSnapShot.get('nickname');
+    var userTribe = userSnapShot.get('tribe');
+    var userID = userSnapShot.get('gameID');
 
     // fcmToken추출
     var fcmTokenRef       = db.collection('GamerList').doc(receiverUID);
@@ -272,15 +277,23 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
         icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
       },
       data: {
-        notiType : 'PAY',
-        payDate : payDate.toString(),
-        content : content,
         gamerUID : receiverUID,
         gamerName : gamerName,
         gamerCode : gamerCode.toString(),
+        gamerTribe : gamerTribe,
+        gamerID : gamerID,
+
         userUID : senderUID,
-        userNickname : userNickname,
-        userCode : userCode.toString()
+        userNickname : userNickname, 
+        userCode : userCode.toString(),
+        userTribe : userTribe,
+        userID : userID,
+
+        content : content,
+        price : price,
+        payDate : payDate.toString(),
+        payStatus : 'payYet', // payYet, paySuccess
+        notiType : 'PAY'
       }
     } 
 
@@ -291,13 +304,22 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       gamer : {
         gamerUID : receiverUID,
         gamerName : gamerName,
-        gamerCode : gamerCode
+        gamerCode : gamerCode,
+        gamerTribe : gamerTribe,
+        gamerID : gamerID,
       },
       user : {
         userUID : senderUID,
         userNickname : userNickname,
-        userCode : userCode
-      } 
+        userCode : userCode,
+        userTribe : userTribe,
+        userID : userID
+      },
+      content : content,
+      price : price,
+      payDate : payDate,
+      payStatus : 'payYet',
+      notiType : 'PAY' 
     }
 
     res.json(result)
