@@ -269,6 +269,34 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     var userCode = Math.floor(Math.random() * 900) + 100;
     
     var payDate = new Date().getTime(); 
+    var payStatus = 'payYet' // payYet, paySuccess
+    var payUID;
+
+    // 거래정보 저장
+    await db.collection('PayList').add({
+      gamerUID : receiverUID,
+      gamerName : gamerName,
+      gamerTribe : gamerTribe,
+      gamerID : gamerID,
+      gamerCode : gamerCode,
+
+      userUID : senderUID,
+      userNickname : userNickname,
+      userTribe : userTribe,
+      userID : userID,
+      userCode : userCode,
+
+      payDate : payDate,
+      content : content,
+      price : price,
+      payStatus : payStatus
+
+    }).then(result => {
+      payUID = result.id;
+    })
+    .catch(err => {
+      throw new functions.https.HttpsError(20001, 'message : fcmToken is invalid');
+    })
 
     const notificationPayload = {
       notification: {
@@ -292,7 +320,9 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
         content : content,
         price : price,
         payDate : payDate.toString(),
-        payStatus : 'payYet', // payYet, paySuccess
+        payStatus : payStatus, // payYet, paySuccess,
+
+        payUID : payUID,
         notiType : 'PAY'
       }
     } 
@@ -318,7 +348,9 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       content : content,
       price : price,
       payDate : payDate,
-      payStatus : 'payYet',
+      payStatus : payStatus,
+
+      payUID : payUID,
       notiType : 'PAY' 
     }
 
@@ -327,88 +359,86 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
 
   exports.sendPayCompleteNotification = functions.https.onRequest(async (req, res) => {
   
-    const receiverUID = req.query.to;
-    const senderUID   = req.query.from;
-    const content     = req.query.content;
-    const price       = req.query.price;
+    const payUID = req.query.payUID;
 
-    // 게이머 닉네임 추출
-    var gamerRef = db.collection('GamerList').doc(receiverUID);
-    var gamerSnapShot = await gamerRef.get();
-    var gamerName = gamerSnapShot.get('name');
-    var gamerTribe = gamerSnapShot.get('tribe');
-    var gamerID = gamerSnapShot.get('gameID');
+    // 결제 내역 불러오기
+    var payRef = db.collection('PayList').doc(payUID);
+    var paySnappShot = await payRef.get();
+    // var gamerUID = paySnappShot.get('gamerUID');
+    // var gamerName = paySnappShot.get('gamerName');
+    // var gamerCode = paySnappShot.get('gamerCode');
+    // var gamerTribe = paySnappShot.get('gamerTribe');
+    // var gamerID = paySnappShot.get('gamerID');
 
-    // 아마추어 닉네임 추출
-    var userRef = db.collection('UserList').doc(senderUID);
-    var userSnapShot = await userRef.get();
-    var userNickname = userSnapShot.get('nickname');
-    var userTribe = userSnapShot.get('tribe');
-    var userID = userSnapShot.get('gameID');
-
-    // fcmToken추출
-    var fcmTokenRef       = db.collection('GamerList').doc(receiverUID);
-    var fcmTokenSnappShot = await fcmTokenRef.get();
-    var fcmToken          = fcmTokenSnappShot.get('fcmToken');
-
-    var gamerCode = Math.floor(Math.random() * 900) + 100;
-    var userCode = Math.floor(Math.random() * 900) + 100;
+    // var userUID = paySnappShot.get('userUID');
+    // var userNickname = paySnappShot.get('userNickname');
+    // var userCode = paySnappShot.get('userCode');
+    // var userTribe = paySnappShot.get('userTribe');
+    // var userID = paySnappShot.get('userID');
+  
+     
     
     var payDate = new Date().getTime(); 
 
-    const notificationPayload = {
-      notification: {
-        title: `${userNickname}님께서 결제를 완료하였습니다!`,
-        body: '코칭을 시작해 주세요!',
-        icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
-      },
-      data: {
-        gamerUID : receiverUID,
-        gamerName : gamerName,
-        gamerCode : gamerCode.toString(),
-        gamerTribe : gamerTribe,
-        gamerID : gamerID,
 
-        userUID : senderUID,
-        userNickname : userNickname, 
-        userCode : userCode.toString(),
-        userTribe : userTribe,
-        userID : userID,
+    // 게이머 fcmToken추출
+    // var fcmTokenRef       = db.collection('GamerList').doc(gamerUID);
+    // var fcmTokenSnappShot = await fcmTokenRef.get();
+    // var fcmToken          = fcmTokenSnappShot.get('fcmToken');
 
-        content : content,
-        price : price,
-        payDate : payDate.toString(),
-        payStatus : 'payYet', // payYet, paySuccess
-        notiType : 'PAY'
-      }
-    } 
+    // const notificationPayload = {
+    //   notification: {
+    //     title: `${userNickname}님께서 인수확인을 완료하였습니다!`,
+    //     body: '환전포인트가  적립되었습니다!',
+    //     icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
+    //   },
+    //   data: {
+    //     gamerUID : gamerUID,
+    //     gamerName : gamerName,
+    //     gamerCode : gamerCode.toString(),
+    //     gamerTribe : gamerTribe,
+    //     gamerID : gamerID,
 
-    const response = await admin.messaging()
-    .sendToDevice(fcmToken, notificationPayload);
+    //     userUID : userUID,
+    //     userNickname : userNickname, 
+    //     userCode : userCode.toString(),
+    //     userTribe : userTribe,
+    //     userID : userID,
 
-    const result = {
-      gamer : {
-        gamerUID : receiverUID,
-        gamerName : gamerName,
-        gamerCode : gamerCode,
-        gamerTribe : gamerTribe,
-        gamerID : gamerID,
-      },
-      user : {
-        userUID : senderUID,
-        userNickname : userNickname,
-        userCode : userCode,
-        userTribe : userTribe,
-        userID : userID
-      },
-      content : content,
-      price : price,
-      payDate : payDate,
-      payStatus : 'payYet',
-      notiType : 'PAY' 
-    }
+    //     price : price,
+    //     payDate : payDate.toString(),
+    //     payStatus : 'paySuccess', // payYet, paySuccess
+    //     notiType : 'PAY_SUCCESS'
+    //   }
+    // } 
 
-    res.json(result)
+    // const response = await admin.messaging()
+    // .sendToDevice(fcmToken, notificationPayload);
+
+    // const result = {
+    //   gamer : {
+    //     gamerUID : gamerUID,
+    //     gamerName : gamerName,
+    //     gamerCode : gamerCode,
+    //     gamerTribe : gamerTribe,
+    //     gamerID : gamerID,
+    //   },
+    //   user : {
+    //     userUID : userUID,
+    //     userNickname : userNickname,
+    //     userCode : userCode,
+    //     userTribe : userTribe,
+    //     userID : userID
+    //   },
+      
+    //   price : price,
+    //   payDate : payDate,
+    //   payStatus : 'paySuccess',
+    //   notiType : 'PAY_SUCCESS' 
+    // }
+
+    // res.json(result)
+    res.json(paySnappShot)
   });
 
 // exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
