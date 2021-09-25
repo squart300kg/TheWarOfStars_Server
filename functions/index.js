@@ -364,83 +364,89 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     // 결제 내역 불러오기
     var payRef = db.collection('PayList').doc(payUID);
     var paySnappShot = await payRef.get();
-    // var gamerUID = paySnappShot.get('gamerUID');
-    // var gamerName = paySnappShot.get('gamerName');
-    // var gamerCode = paySnappShot.get('gamerCode');
-    // var gamerTribe = paySnappShot.get('gamerTribe');
-    // var gamerID = paySnappShot.get('gamerID');
+    var gamerUID = paySnappShot.get('gamerUID');
+    var gamerName = paySnappShot.get('gamerName');
+    var gamerCode = paySnappShot.get('gamerCode');
+    var gamerTribe = paySnappShot.get('gamerTribe');
+    var gamerID = paySnappShot.get('gamerID');
 
-    // var userUID = paySnappShot.get('userUID');
-    // var userNickname = paySnappShot.get('userNickname');
-    // var userCode = paySnappShot.get('userCode');
-    // var userTribe = paySnappShot.get('userTribe');
-    // var userID = paySnappShot.get('userID');
+    var userUID = paySnappShot.get('userUID');
+    var userNickname = paySnappShot.get('userNickname');
+    var userCode = paySnappShot.get('userCode');
+    var userTribe = paySnappShot.get('userTribe');
+    var userID = paySnappShot.get('userID');
   
-     
+    var price = paySnappShot.get('price');
+    var markedPrice = markCommaForPrice(price);
+    var payDate = new Date().getTime();
+    var payStatus = 'paySuccess'; 
+
+    // fcmToken추출
+    var fcmTokenRef       = db.collection('UserList').doc(userUID);
+    var fcmTokenSnappShot = await fcmTokenRef.get();
+    var fcmToken          = fcmTokenSnappShot.get('fcmToken');
     
-    var payDate = new Date().getTime(); 
+    const notificationPayload = {
+      notification: {
+        title: `${userNickname}님께서 인수확인을 완료하였습니다!`,
+        body: `환전포인트 ${markedPrice}P가 적립되었습니다!`,
+        icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
+      },
+      data: {
+        gamerUID : gamerUID,
+        gamerName : gamerName,
+        gamerCode : gamerCode.toString(),
+        gamerTribe : gamerTribe,
+        gamerID : gamerID,
 
+        userUID : userUID,
+        userNickname : userNickname, 
+        userCode : userCode.toString(),
+        userTribe : userTribe,
+        userID : userID,
 
-    // 게이머 fcmToken추출
-    // var fcmTokenRef       = db.collection('GamerList').doc(gamerUID);
-    // var fcmTokenSnappShot = await fcmTokenRef.get();
-    // var fcmToken          = fcmTokenSnappShot.get('fcmToken');
+        price : price,
+        payDate : payDate.toString(),
+        payStatus : payStatus, // payYet, paySuccess
+        payUID : payUID, 
+        notiType : 'PAY_SUCCESS'
+      }
+    } 
 
-    // const notificationPayload = {
-    //   notification: {
-    //     title: `${userNickname}님께서 인수확인을 완료하였습니다!`,
-    //     body: '환전포인트가  적립되었습니다!',
-    //     icon: 'https://blog.naver.com/common/util/imageZoom.jsp?url=https://blogpfthumb-phinf.pstatic.net/MjAyMTA5MDNfMTcg/MDAxNjMwNTk2NzI2NDc3.iqGxj76IIFIgf6DR3A6y5QGjWu2tIzA3eR6eB0tj1YIg.yJ6MgTcQ9JH8k3JEwsYgBLzkIGUuNKtekP-ICF4WXTUg.PNG.happymj42/profileImage.png&rClickYn=true&isOwner=false'
-    //   },
-    //   data: {
-    //     gamerUID : gamerUID,
-    //     gamerName : gamerName,
-    //     gamerCode : gamerCode.toString(),
-    //     gamerTribe : gamerTribe,
-    //     gamerID : gamerID,
+    const response = await admin.messaging()
+    .sendToDevice(fcmToken, notificationPayload);
 
-    //     userUID : userUID,
-    //     userNickname : userNickname, 
-    //     userCode : userCode.toString(),
-    //     userTribe : userTribe,
-    //     userID : userID,
-
-    //     price : price,
-    //     payDate : payDate.toString(),
-    //     payStatus : 'paySuccess', // payYet, paySuccess
-    //     notiType : 'PAY_SUCCESS'
-    //   }
-    // } 
-
-    // const response = await admin.messaging()
-    // .sendToDevice(fcmToken, notificationPayload);
-
-    // const result = {
-    //   gamer : {
-    //     gamerUID : gamerUID,
-    //     gamerName : gamerName,
-    //     gamerCode : gamerCode,
-    //     gamerTribe : gamerTribe,
-    //     gamerID : gamerID,
-    //   },
-    //   user : {
-    //     userUID : userUID,
-    //     userNickname : userNickname,
-    //     userCode : userCode,
-    //     userTribe : userTribe,
-    //     userID : userID
-    //   },
+    const result = {
+      gamer : {
+        gamerUID : gamerUID,
+        gamerName : gamerName,
+        gamerCode : gamerCode,
+        gamerTribe : gamerTribe,
+        gamerID : gamerID,
+      },
+      user : {
+        userUID : userUID,
+        userNickname : userNickname,
+        userCode : userCode,
+        userTribe : userTribe,
+        userID : userID
+      },
       
-    //   price : price,
-    //   payDate : payDate,
-    //   payStatus : 'paySuccess',
-    //   notiType : 'PAY_SUCCESS' 
-    // }
+      price : price,
+      payDate : payDate,
+      payStatus : 'paySuccess',
+      payUID : payUID, 
+      notiType : 'PAY_SUCCESS' 
+    }
 
-    // res.json(result)
-    res.json(paySnappShot)
+    res.json(result)
+    // res.json(paySnappShot)
   });
 
+  function markCommaForPrice(price) {
+    var regexp = /\B(?=(\d{3})+(?!\d))/g;
+    return price.toString().replace(regexp, ',');
+  }
 // exports.makeUppercase = functions.firestore.document('/messages/{documentId}')
 // .onCreate((snap, context) => {
   
