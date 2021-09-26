@@ -381,8 +381,14 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
     var payDate = new Date().getTime();
     var payStatus = 'paySuccess'; 
 
+    // 결제  내역  갱신
+    await db.collection('PayList').doc(payUID).update({
+      payDate : payDate,
+      payStatus : payStatus})
+
+
     // fcmToken추출
-    var fcmTokenRef       = db.collection('UserList').doc(userUID);
+    var fcmTokenRef       = db.collection('GamerList').doc(gamerUID);
     var fcmTokenSnappShot = await fcmTokenRef.get();
     var fcmToken          = fcmTokenSnappShot.get('fcmToken');
     
@@ -413,7 +419,7 @@ exports.sendMessage = functions.https.onRequest(async (req, res) => {
       }
     } 
 
-    const response = await admin.messaging()
+    await admin.messaging()
     .sendToDevice(fcmToken, notificationPayload);
 
     const result = {
